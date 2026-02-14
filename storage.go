@@ -24,8 +24,8 @@ func (st *Storage) Create(book Book) error {
 }
 
 func (st *Storage) GetAll() []Book {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
 
 	books := make([]Book, 0, len(st.Books))
 
@@ -37,8 +37,8 @@ func (st *Storage) GetAll() []Book {
 }
 
 func (st *Storage) GetByID(id string) (Book, bool) {
-	st.mu.Lock()
-	defer st.mu.Unlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
 
 	if book, isExist := st.Books[id]; isExist {
 		return book, isExist
@@ -68,5 +68,12 @@ func (st *Storage) Delete(id string) error {
 		return nil
 	} else {
 		return errors.New("This book doesn't exist")
+	}
+}
+
+func NewStorage() *Storage {
+	return &Storage{
+		Books: make(map[string]Book),
+		mu:    &sync.RWMutex{},
 	}
 }
