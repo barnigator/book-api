@@ -1,16 +1,18 @@
-package main
+package repository
 
 import (
 	"errors"
 	"sync"
+
+	"github.com/barnigator/book-api/internal/entity"
 )
 
 type Storage struct {
-	Books map[string]Book
+	Books map[string]entity.Book
 	mu    *sync.RWMutex
 }
 
-func (st *Storage) Create(book Book) error {
+func (st *Storage) Create(book entity.Book) error {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -23,11 +25,11 @@ func (st *Storage) Create(book Book) error {
 	return nil
 }
 
-func (st *Storage) GetAll() []Book {
+func (st *Storage) GetAll() []entity.Book {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 
-	books := make([]Book, 0, len(st.Books))
+	books := make([]entity.Book, 0, len(st.Books))
 
 	for _, book := range st.Books {
 		books = append(books, book)
@@ -36,18 +38,18 @@ func (st *Storage) GetAll() []Book {
 	return books
 }
 
-func (st *Storage) GetByID(id string) (Book, bool) {
+func (st *Storage) GetByID(id string) (entity.Book, bool) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
 
 	if book, isExist := st.Books[id]; isExist {
 		return book, isExist
 	} else {
-		return Book{}, isExist
+		return entity.Book{}, isExist
 	}
 }
 
-func (st *Storage) Update(id string, book Book) error {
+func (st *Storage) Update(id string, book entity.Book) error {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -73,7 +75,7 @@ func (st *Storage) Delete(id string) error {
 
 func NewStorage() *Storage {
 	return &Storage{
-		Books: make(map[string]Book),
+		Books: make(map[string]entity.Book),
 		mu:    &sync.RWMutex{},
 	}
 }
