@@ -5,21 +5,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
+	"github.com/barnigator/book-api/internal/deps"
 	"github.com/barnigator/book-api/internal/entity"
-	"github.com/barnigator/book-api/internal/usecase"
 )
 
 type Handler struct {
-	uc usecase.UseCase
+	uc deps.UseCase
 }
 
-func NewHandler(uc usecase.UseCase) *Handler {
+func NewHandler(uc deps.UseCase) *Handler {
 	return &Handler{uc}
 }
 
-func (h *Handler) AddNewBookHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AddNewBook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Only Post method available"))
+		return
+	}
+
 	if r.Header.Get("Content-type") != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Content-type must be json")
@@ -53,7 +58,13 @@ func (h *Handler) AddNewBookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func (h *Handler) GetAllBooksHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetAllBooks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Only Get method available"))
+		return
+	}
+
 	books := h.uc.GetAllBooks()
 
 	jsonBooks, err := json.Marshal(books)
@@ -67,34 +78,13 @@ func (h *Handler) GetAllBooksHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBooks)
 }
 
-func (h *Handler) GetBookByIdHandler(w http.ResponseWriter, r *http.Request) {
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) != 3 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Wrong URL format"))
+func (h *Handler) GetBookById(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Only Get method available"))
 		return
 	}
 
-	idBook := pathParts[2]
-
-	book, ok := h.uc.GetBookById(idBook)
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Book doesn't exist"))
-		return
-	}
-	jsonBook, err := json.Marshal(book)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBook)
-}
-
-func (h *Handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-type") != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Content-type must be json")
@@ -117,16 +107,53 @@ func (h *Handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) != 3 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Wrong URL format"))
+	book, ok := h.uc.GetBookById(book.ID)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Book doesn't exist"))
+		return
+	}
+	jsonBook, err := json.Marshal(book)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBook)
+}
+
+func (h *Handler) UpdateBook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Only Put method available"))
 		return
 	}
 
-	idBook := pathParts[2]
+	if r.Header.Get("Content-type") != "application/json" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Content-type must be json")
+		return
+	}
+	defer r.Body.Close()
 
-	err = h.uc.UpdateBook(idBook, book)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	var book entity.Book
+	err = json.Unmarshal(body, &book)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	err = h.uc.UpdateBook(book.ID, book)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -137,17 +164,36 @@ func (h *Handler) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func (h *Handler) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
-	pathParts := strings.Split(r.URL.Path, "/")
-	if len(pathParts) != 3 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Wrong URL format"))
+func (h *Handler) DeleteBook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Only Delete method available"))
 		return
 	}
 
-	idBook := pathParts[2]
+	if r.Header.Get("Content-type") != "application/json" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Content-type must be json")
+		return
+	}
+	defer r.Body.Close()
 
-	err := h.uc.Delete(idBook)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	var book entity.Book
+	err = json.Unmarshal(body, &book)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	err = h.uc.Delete(book.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

@@ -1,20 +1,15 @@
 package usecase
 
-import "github.com/barnigator/book-api/internal/entity"
-
-type Repository interface {
-	Create(book entity.Book) error
-	GetAll() []entity.Book
-	GetByID(id string) (entity.Book, bool)
-	Update(id string, book entity.Book) error
-	Delete(id string) error
-}
+import (
+	"github.com/barnigator/book-api/internal/deps"
+	"github.com/barnigator/book-api/internal/entity"
+)
 
 type UseCase struct {
-	repo Repository
+	repo deps.Repository
 }
 
-func NewUseCase(r Repository) *UseCase { return &UseCase{r} }
+func NewUseCase(r deps.Repository) *UseCase { return &UseCase{r} }
 
 func (uc *UseCase) CreateBook(book entity.Book) error {
 	return uc.repo.Create(book)
