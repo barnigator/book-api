@@ -24,11 +24,19 @@
 
 ## Структура проекта
 book-api/
+
 ├── main.go # точка входа, graceful shutdown, запуск сервера
+
 ├── handlers/
+
 │ └── handlers.go # обработчики HTTP-запросов
+
 ├── storage/
+
 │ └── storage.go # in-memory хранилище с мьютексом
+
 ├── models/
+
 │ └── book.go # структуры данных
+
 └── README.md
